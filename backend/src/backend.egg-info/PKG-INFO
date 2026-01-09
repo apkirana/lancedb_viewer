@@ -1,0 +1,27 @@
+Metadata-Version: 2.4
+Name: backend
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: altair>=5.5.0
+Requires-Dist: azure-identity>=1.19.0
+Requires-Dist: azure-keyvault>=1.1.0
+Requires-Dist: azure-keyvault-secrets>=4.9.0
+Requires-Dist: azure-storage-blob>=12.24.1
+Requires-Dist: boto3>=1.36.13
+Requires-Dist: debugpy>=1.8.12
+Requires-Dist: fastapi>=0.115.7
+Requires-Dist: groq>=0.15.0
+Requires-Dist: jupyter>=1.1.1
+Requires-Dist: lancedb>=0.18.0
+Requires-Dist: marimo>=0.10.17
+Requires-Dist: numpy>=2.0.2
+Requires-Dist: openai>=1.60.1
+Requires-Dist: pandas>=2.2.3
+Requires-Dist: pydantic>=2.10.6
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: requests>=2.32.3
+Requires-Dist: scikit-learn>=1.6.1
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: uvicorn>=0.34.0

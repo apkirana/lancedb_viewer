@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/embeddings.py
+src/main.py
+src/test_db.py
+src/backend.egg-info/PKG-INFO
+src/backend.egg-info/SOURCES.txt
+src/backend.egg-info/dependency_links.txt
+src/backend.egg-info/requires.txt
+src/backend.egg-info/top_level.txt
+src/embeddings/azure_embeddings.py
+src/routes/agent.py
+src/routes/manager.py
+src/routes/router_database.py
+src/routes/setup.py
+src/storage/provider.py
