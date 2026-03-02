@@ -42,14 +42,9 @@ async def add_data(request: Request):
         data = await request.json()
         table = data["table"]
         records = data["data"]
+        unique_field = data.get("unique_field") # Optional for add_data
 
-        if table == "user":
-            for record in records:
-                record["user_id"] = hashlib.sha256(
-                    (record["usename"] + record["email"]).encode('utf-8')).hexdigest()
-            no_of_items_added = db_manager.add_data("user", records, unique_field="user_id")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid table name")
+        no_of_items_added = db_manager.add_data(table, records, unique_field=unique_field)
 
         if no_of_items_added == 0:
             return {"message": f"All items already exist in the {table} table", "no_of_items_added": 0, "success": False}
@@ -75,6 +70,7 @@ async def update_data(request: Request):
         request (Request): Body: 
             {
                 "table": "table_name", 
+                "unique_field": "field_name",
                 "data": [
                     {
                         "field1": "value1", 
@@ -94,22 +90,20 @@ async def update_data(request: Request):
         data = await request.json()
         table = data["table"]
         records = data["data"]
+        unique_field = data.get("unique_field")
 
-        if table == "user":
-            for record in records:
-                record["user_id"] = hashlib.sha256(
-                    (record["usename"] + record["email"]).encode('utf-8')).hexdigest()
-            no_of_items_added = db_manager.update_data("user", records, unique_field="user_id")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid table name")
+        if not unique_field:
+            raise HTTPException(status_code=400, detail="unique_field is required for update_data")
+
+        no_of_items_added = db_manager.update_data(table, records, unique_field=unique_field)
 
         if no_of_items_added == 0:
-            return {"message": f"All items is the exact same in the {table} table", "no_of_items_added": 0, "success": False}
+            return {"message": f"No items were updated in the {table} table", "no_of_items_updated": 0, "success": False}
         else:
             return {
                 "success": True,
-                "message": f"{no_of_items_added} records updated to {table} table successfully",
-                "no_of_items_added": no_of_items_added
+                "message": f"{no_of_items_added} records updated in {table} table successfully",
+                "no_of_items_updated": no_of_items_added
             }
 
     except Exception as e:
@@ -181,6 +175,33 @@ async def vector_search(request: Request):
         }
     except Exception as e:
         logging.exception("Exception occurred in vector_search: %s", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/delete-data/", tags=["Database"])
+async def delete_data(request: Request):
+    """
+    Deletes data from the specified table based on a condition.
+
+    Args:
+        request (Request): Body: {"table": "table_name", "condition": "SQL condition"}
+
+    Returns:
+        dict: Success message.
+    """
+    try:
+        data = await request.json()
+        table = data["table"]
+        condition = data["condition"]
+
+        db_manager.delete_rows(table, condition)
+        
+        return {
+            "success": True,
+            "message": f"Rows matching '{condition}' deleted from {table} table successfully"
+        }
+    except Exception as e:
+        logging.exception("Exception occurred in delete_data: %s", str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

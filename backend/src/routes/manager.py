@@ -129,25 +129,37 @@ class LanceDBManager:
             
             
 
-    def add_data(self, table_name: str, data: List[Dict[str, Any]], unique_field: str):
+    def add_data(self, table_name: str, data: List[Dict[str, Any]], unique_field: str = None):
         """
-        Add data to a LanceDB table, avoiding duplicates based on specified unique field.
+        Add data to a LanceDB table, optionally avoiding duplicates based on specified unique field.
 
         Args:
             table_name (str): Name of the table.
             data (List[Dict[str, Any]]): List of data entries to add.
-            unique_field (str): Field to use for uniqueness check.
+            unique_field (str, optional): Field to use for uniqueness check.
 
         Returns:
             int: Number of rows added.
         """
-        if not unique_field:
-            raise ValueError("Unique field must be specified to check for duplicates.")
-
         try:
-            table = self.db.open_table(table_name)
-            existing_ids = self._get_unique_ids(table, unique_field)
+            try:
+                table = self.db.open_table(table_name)
+            except Exception as e:
+                # If table doesn't exist, create it with the incoming data
+                logging.info(f"Table '{table_name}' not found. Creating it with the provided data.")
+                data = self._format_input_data(data)
+                self.db.create_table(table_name, data=data)
+                return len(data)
+
             data = self._format_input_data(data)
+            
+            if not unique_field:
+                # No unique check, add all data
+                table.add(data)
+                logging.info(f"Added {len(data)} entries to table '{table_name}' without duplication check.")
+                return len(data)
+
+            existing_ids = self._get_unique_ids(table, unique_field)
             new_ids = [item[unique_field] for item in data] 
             
             #Get the difference between the existing ids and the new ids using set
@@ -159,14 +171,16 @@ class LanceDBManager:
             new_data = [item for item in data if item[unique_field] in new_ids]
             if len(new_data) == 0:
                 logging.info(f"No new entries to add to table '{table_name}'.")
-                return
+                return 0
             
             else:
                 table.add(new_data)
                 logging.info(f"Added {len(new_data)} entries to table '{table_name}'.")
+                return len(new_data)
             
         except Exception as e:
             logging.error(f"Error adding data to table '{table_name}': {e}")
+            raise
             
 
     def update_data(self, table_name: str, data: List[Dict[str, Any]], unique_field: str):
