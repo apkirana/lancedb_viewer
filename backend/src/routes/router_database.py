@@ -131,6 +131,8 @@ def fetch_data(table: str, columns_to_exclude: str = "", page: int = 1, per_page
     """
     try:
         # as_pandas=True returns a DataFrame
+        table_obj = db_manager.get_table(table)
+        total_count = table_obj.count_rows()
         data = db_manager.fetch_data(table, as_pandas=True, page=page, per_page=per_page, filter=filter, columns_to_exclude=columns_to_exclude.split(","))
         data_json = data.map(lambda x: x.tolist() if isinstance(
             x, np.ndarray) else x).to_dict(orient="records")
@@ -138,11 +140,13 @@ def fetch_data(table: str, columns_to_exclude: str = "", page: int = 1, per_page
             "page": page,
             "per_page": per_page,
             "total": len(data_json),
+            "total_count": total_count,
             "data": data_json
         })
     except Exception as e:
         logging.exception("Exception occurred in fetch_data: %s", str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.post("/api/vector-search/", tags=["Database"])

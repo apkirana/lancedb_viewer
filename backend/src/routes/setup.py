@@ -83,7 +83,7 @@ class StorageConfig:
     provider: str = "local"
     connection_string: str = None
     container_name: str = None
-    local_path: str = "lancedb_data"
+    local_path: str = os.getenv("LOCAL_DB_PATH", "/Users/puspa.kirana/Documents/GitHub/agentgip-paper1/database/domain_knowledge")
     credentials: dict = None
 
 @dataclass
@@ -110,7 +110,7 @@ class AppConfig:
         
         storage_config = StorageConfig(
             provider=storage_provider,
-            local_path=os.getenv("LOCAL_DB_PATH", "lancedb_data")
+            local_path=os.getenv("LOCAL_DB_PATH", "/Users/puspa.kirana/Documents/GitHub/agentgip-paper1/database/lancedb")
         )
         
         if storage_provider == "azure":

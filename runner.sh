@@ -3,7 +3,7 @@
 # LanceDB Viewer Runner Script
 # Usage: ./runner.sh [start|stop|restart|status]
 
-PROJECT_DIR="/Users/puspa.kirana/Documents/GitHub/lancedb_viewer/lancedb-viewer"
+PROJECT_DIR="/Users/puspa.kirana/Documents/GitHub/lancedb_viewer"
 BACKEND_DIR="$PROJECT_DIR/backend/src"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 
