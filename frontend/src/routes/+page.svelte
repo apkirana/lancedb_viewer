@@ -49,6 +49,11 @@
 	let deletingRow = null;
 	let deleteLoading = false;
 
+	// ── Bulk select ─────────────────────────────────────────────────────────────
+	let selectedRowIds = new Set();
+	let showBulkDeleteConfirm = false;
+	let bulkDeleteLoading = false;
+
 	// ── Computed ───────────────────────────────────────────────────────────────
 	$: activeDb = DATABASES.find(d => d.id === activeDbId);
 	$: connectedCount = Object.values(connectionCache).filter(c => c.connected).length;
@@ -66,6 +71,9 @@
 	$: editableKeys = tableData.length > 0
 		? Object.keys(tableData[0]).filter(k => k !== '_rowid' && k !== 'vector')
 		: [];
+
+	$: allSelected = tableData.length > 0 && tableData.every(r => selectedRowIds.has(r[uniqueField]));
+	$: someSelected = selectedRowIds.size > 0;
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
 	function toggleCell(rowIndex, column) {
@@ -134,6 +142,7 @@
 		selectedTable = '';
 		tableData = [];
 		expandedCells = {};
+		selectedRowIds = new Set();
 		error = '';
 		currentPage = 1;
 		await connectToDatabase(DATABASES.find(d => d.id === dbId));
@@ -157,6 +166,7 @@
 		error = '';
 		tableData = [];
 		expandedCells = {};
+		selectedRowIds = new Set();
 		try {
 			if (!(await ensureConnected())) {
 				error = 'Failed to connect to database'; loading = false; return;
@@ -304,6 +314,59 @@
 			error = err.message;
 		} finally {
 			deleteLoading = false;
+		}
+	}
+
+	// ── Bulk select helpers ─────────────────────────────────────────────────────
+	function toggleRowSelect(row) {
+		const id = row[uniqueField];
+		const next = new Set(selectedRowIds);
+		next.has(id) ? next.delete(id) : next.add(id);
+		selectedRowIds = next;
+	}
+
+	function toggleSelectAll() {
+		if (allSelected) {
+			selectedRowIds = new Set();
+		} else {
+			selectedRowIds = new Set(tableData.map(r => r[uniqueField]));
+		}
+	}
+
+	async function executeBulkDelete() {
+		if (selectedRowIds.size === 0) return;
+		bulkDeleteLoading = true;
+		try {
+			if (!(await ensureConnected())) { bulkDeleteLoading = false; return; }
+			const ids = [...selectedRowIds];
+			const count = ids.length;
+			const firstId = ids[0];
+			let condition;
+			if (typeof firstId === 'string') {
+				const escaped = ids.map(v => `'${String(v).replace(/'/g, "''")}'`).join(', ');
+				condition = `${uniqueField} IN (${escaped})`;
+			} else {
+				condition = `${uniqueField} IN (${ids.join(', ')})`;
+			}
+			const res = await fetch('http://localhost:8001/api/delete-data/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ table: selectedTable, condition })
+			});
+			if (res.ok) {
+				showBulkDeleteConfirm = false;
+				selectedRowIds = new Set();
+				const prevPage = tableData.length === count && currentPage > 1 ? currentPage - 1 : currentPage;
+				await loadTableData(selectedTable, prevPage);
+				showSuccess(`${count} records deleted.`);
+			} else {
+				error = `Bulk delete failed: ${await res.text()}`;
+				showBulkDeleteConfirm = false;
+			}
+		} catch (err) {
+			error = err.message;
+		} finally {
+			bulkDeleteLoading = false;
 		}
 	}
 
@@ -471,6 +534,17 @@
 							<option value="100">100 / page</option>
 						</select>
 
+						<!-- Bulk delete button -->
+						{#if someSelected}
+							<button
+								class="h-7 px-3 text-xs font-medium bg-destructive text-white rounded-md hover:bg-destructive/90 transition-colors flex items-center gap-1.5 animate-in fade-in"
+								on:click={() => showBulkDeleteConfirm = true}
+							>
+								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+								Delete {selectedRowIds.size} selected
+							</button>
+						{/if}
+
 						<!-- Add button -->
 						{#if tableData.length > 0}
 							<button
@@ -491,6 +565,16 @@
 						<table class="w-full text-xs border-collapse">
 							<thead class="sticky top-0 z-10">
 								<tr class="bg-card border-b border-border">
+									<!-- Select-all checkbox -->
+									<th class="px-3 py-2.5 w-9 shrink-0 border-r border-border">
+										<input
+											type="checkbox"
+											class="w-3.5 h-3.5 cursor-pointer accent-foreground"
+											checked={allSelected}
+											on:change={toggleSelectAll}
+											title={allSelected ? 'Deselect all' : 'Select all on this page'}
+										/>
+									</th>
 									{#each displayColumns as col}
 										<th class="px-4 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap border-r border-border last:border-r-0 tracking-wide text-[11px] uppercase">
 											{col}
@@ -504,7 +588,18 @@
 							</thead>
 							<tbody>
 								{#each tableData as row, i}
-									<tr class="border-b border-border hover:bg-accent/40 transition-colors group {i % 2 === 0 ? 'bg-background' : 'bg-card/30'}">
+									<tr class="border-b border-border hover:bg-accent/40 transition-colors group {selectedRowIds.has(row[uniqueField]) ? 'bg-primary/10 border-primary/20' : i % 2 === 0 ? 'bg-background' : 'bg-card/30'}">
+										<!-- Row checkbox -->
+										<!-- svelte-ignore a11y-click-events-have-key-events -->
+										<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+										<td class="px-3 py-2 w-9 shrink-0 border-r border-border align-middle" on:click|stopPropagation>
+											<input
+												type="checkbox"
+												class="w-3.5 h-3.5 cursor-pointer accent-foreground"
+												checked={selectedRowIds.has(row[uniqueField])}
+												on:change={() => toggleRowSelect(row)}
+											/>
+										</td>
 										{#each displayColumns as col}
 											<!-- svelte-ignore a11y-click-events-have-key-events -->
 											<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -768,6 +863,62 @@
 							</svg>
 						{/if}
 						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- ─── Bulk Delete Confirmation ──────────────────────────────────────────── -->
+{#if showBulkDeleteConfirm}
+	<div
+		class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+		on:click={() => showBulkDeleteConfirm = false}
+		role="dialog"
+		aria-modal="true"
+	></div>
+
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+		<div class="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm pointer-events-auto">
+			<div class="px-5 py-4">
+				<div class="flex items-start gap-3">
+					<div class="w-9 h-9 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
+						<svg class="w-4 h-4 text-destructive" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
+						</svg>
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Delete {selectedRowIds.size} Records</h3>
+						<p class="text-xs text-muted-foreground mt-1 leading-relaxed">
+							This will permanently delete
+							<strong class="text-foreground">{selectedRowIds.size} selected records</strong>
+							from <code class="font-mono text-[10px] bg-secondary px-1 py-0.5 rounded">{selectedTable}</code>.
+							This action cannot be undone.
+						</p>
+					</div>
+				</div>
+
+				<div class="flex items-center justify-end gap-2 mt-5">
+					<button
+						class="h-8 px-4 text-xs rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+						on:click={() => showBulkDeleteConfirm = false}
+						disabled={bulkDeleteLoading}
+					>
+						Cancel
+					</button>
+					<button
+						class="h-8 px-4 text-xs font-medium bg-destructive text-white rounded-md hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+						on:click={executeBulkDelete}
+						disabled={bulkDeleteLoading}
+					>
+						{#if bulkDeleteLoading}
+							<svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+								<circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+								<path class="opacity-70" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+							</svg>
+						{/if}
+						Delete {selectedRowIds.size} records
 					</button>
 				</div>
 			</div>
