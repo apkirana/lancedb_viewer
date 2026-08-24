@@ -45,7 +45,7 @@ Ensure you have the following installed on your system:
 Use the provided runner script from the root directory:
 
 ```bash
-cd /Users/puspa.kirana/Documents/GitHub/lancedb_viewer
+cd lancedb_viewer
 ./runner.sh start
 ```
 
@@ -62,8 +62,8 @@ To start the application in development mode manually:
 1.  Clone the repository:
 
     ```bash
-    git clone https://github.com/valiantlynx/lancedb-viewer.git
-    cd lancedb-viewer
+    git clone https://github.com/apkirana/lancedb_viewer.git
+    cd lancedb_viewer
     ```
 
 2.  Start the backend server:
@@ -107,12 +107,23 @@ If you'd like to contribute:
 
 ---
 
-## License
+## Licence
 
-This project is open source. Check the repository for license details.
+Upstream code is distributed under the **Royalty-Share Open-Source License (RSOSL) v1.0**,
+© 2024 valiantlynx — see [LICENCE.md](LICENCE.md). Modifications in this fork are released under the
+same terms.
 
 ---
 
-## Contact
+## Maintainer of this fork
 
-For questions or suggestions, please open an issue in the GitHub repository.
+**Annisa Puspa Kirana** — PhD researcher, Faculty of Geo-Information Science and Earth Observation (ITC),
+University of Twente. This fork is used as a working inspector for the LanceDB tables behind my
+retrieval experiments in agentic geospatial workflows.
+
+[Google Scholar](https://scholar.google.com/citations?user=BQl6KOsAAAAJ&hl=en) ·
+[ORCID](https://orcid.org/0000-0002-4622-1445) ·
+[LinkedIn](https://www.linkedin.com/in/annisapuspakirana) ·
+[GitHub](https://github.com/apkirana)
+
+Questions or suggestions: please open an issue.
